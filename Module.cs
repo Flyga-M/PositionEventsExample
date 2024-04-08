@@ -78,7 +78,7 @@ namespace PositionEventsExample
         private void AddTestAreas()
         {
             // create the areas
-            IBoundingObject area = new BoundingObjectBox(new Vector3(0), new Vector3(10, 20, 30));
+            IBoundingObject area = new BoundingObjectBox(new Vector3(50, 50, 10), new Vector3(60, 70, 40));
             IBoundingObject prism = GetTestPrism();
             IBoundingObject testLake = GetTestLake();
             IBoundingObject testDifference = GetTestDifference();
@@ -127,8 +127,8 @@ namespace PositionEventsExample
 
         private IBoundingObject GetTestDifference()
         {
-            BoundingObjectSphere outerSphere = new BoundingObjectSphere(new Vector3(20), 20);
-            BoundingObjectSphere innerSphere = new BoundingObjectSphere(new Vector3(23), 8);
+            BoundingObjectSphere outerSphere = new BoundingObjectSphere(new Vector3(-20, -20, 20), 20);
+            BoundingObjectSphere innerSphere = new BoundingObjectSphere(new Vector3(-23, -26, 23), 8);
 
             BoundingObjectBuilder builder = new BoundingObjectBuilder()
                 .Add(outerSphere)

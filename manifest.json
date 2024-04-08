@@ -8,7 +8,7 @@
   "description": "Description of your module. Visit https://github.com/blish-hud/manifest.json/blob/master/manifest-v1.md for details about the manifest format.",
   "dependencies": {
     "bh.blishhud": "^1.0.0",
-	"Flyga.PositionEvents": "^0.1.0"
+	  "Flyga.PositionEvents": "^0.2.0"
   },
   "url": "https://github.com/flyga/PositionEventsExample",
   "contributors": [
