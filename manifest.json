@@ -1,0 +1,19 @@
+{
+  "name": "PositionEventsExample",
+  "version": "0.1.0",
+  "namespace": "PositionEventsExample",
+  "package": "PositionEventsExample.dll",
+  "manifest_version": 1,
+
+  "description": "Description of your module. Visit https://github.com/blish-hud/manifest.json/blob/master/manifest-v1.md for details about the manifest format.",
+  "dependencies": {
+    "bh.blishhud": "^1.0.0",
+	"Flyga.PositionEvents": "^0.1.0"
+  },
+  "url": "https://github.com/flyga/PositionEventsExample",
+  "contributors": [
+    {
+      "name": "flyga"
+    }
+  ]
+}
