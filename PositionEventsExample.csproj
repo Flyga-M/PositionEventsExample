@@ -194,9 +194,8 @@
       <HintPath>packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="PositionEvents, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
-      <HintPath>packages\PositionEvents.1.0.0\lib\net48\PositionEvents.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="PositionEvents, Version=1.1.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <HintPath>packages\PositionEvents.1.1.0\lib\net48\PositionEvents.dll</HintPath>
     </Reference>
     <Reference Include="PositionEventsModule">
       <HintPath>.\PositionEventsModule.dll</HintPath>

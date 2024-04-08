@@ -78,7 +78,7 @@ namespace PositionEventsExample
         private void AddTestAreas()
         {
             // create the areas
-            IBoundingObject area = new BoundingObjectBox(new BoundingBox(new Vector3(0), new Vector3(10, 20, 30)));
+            IBoundingObject area = new BoundingObjectBox(new Vector3(0), new Vector3(10, 20, 30));
             IBoundingObject prism = GetTestPrism();
             IBoundingObject testLake = GetTestLake();
             IBoundingObject testDifference = GetTestDifference();
@@ -127,10 +127,14 @@ namespace PositionEventsExample
 
         private IBoundingObject GetTestDifference()
         {
-            BoundingObjectSphere outerSphere = new BoundingObjectSphere(new BoundingSphere(new Vector3(20), 20));
-            BoundingObjectSphere innerSphere = new BoundingObjectSphere(new BoundingSphere(new Vector3(23), 8));
+            BoundingObjectSphere outerSphere = new BoundingObjectSphere(new Vector3(20), 20);
+            BoundingObjectSphere innerSphere = new BoundingObjectSphere(new Vector3(23), 8);
 
-            return new BoundingObjectGroupDifference(outerSphere, new IBoundingObject[] { innerSphere }, false);
+            BoundingObjectBuilder builder = new BoundingObjectBuilder()
+                .Add(outerSphere)
+                .Subtract(innerSphere);
+
+            return builder.Build();
         }
 
         protected override void OnModuleLoaded(EventArgs e)
