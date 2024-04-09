@@ -198,21 +198,19 @@ private void OnOtherModuleDisabled(object sender, EventArgs e)
 ### OnPositionEventsDisabled
 When you're sure, the Position Events Module was disabled, your module should also be
  disabled.
-
-You don't need to remove your registered areas.
 ```
 private void OnPositionEventsDisabled(ModuleManager moduleManager)
 {
     // disable this module since it's dependent on the Position Events Module
     _thisModuleManager?.Disable();
-
-    // no need to remove the areas from the Position Events Module, since it 
-    // takes care of that on it's own.
 }
 ```
 ## Clean up after yourself
 When your module is unloaded, you should make sure to unset all static members and
  unsubscribe from the events you subscribed to.
+
+You don't need to remove your registered areas, because the Position Events Module
+ takes care of that.
  ```
  protected override void Unload()
 {
@@ -225,6 +223,9 @@ When your module is unloaded, you should make sure to unset all static members a
         _positionEventsModuleManager.ModuleEnabled -= OnOtherModuleEnabled;
         _positionEventsModuleManager.ModuleDisabled -= OnOtherModuleDisabled;
     }
+
+    // no need to remove the areas from the Position Events Module, since it 
+    // takes care of that on it's own.
 
     _positionEventsModuleManager = null;
     _thisModuleManager = null;

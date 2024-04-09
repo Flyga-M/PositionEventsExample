@@ -75,9 +75,6 @@ namespace PositionEventsExample
         {
             // disable this module since it's dependent on the Position Events Module
             _thisModuleManager?.Disable();
-
-            // no need to remove the areas from the Position Events Module, since it 
-            // takes care of that on it's own.
         }
 
         private void OnOtherModuleEnabled(object sender, EventArgs e)
@@ -232,6 +229,9 @@ namespace PositionEventsExample
                 _positionEventsModuleManager.ModuleEnabled -= OnOtherModuleEnabled;
                 _positionEventsModuleManager.ModuleDisabled -= OnOtherModuleDisabled;
             }
+
+            // no need to remove the areas from the Position Events Module, since it 
+            // takes care of that on it's own.
 
             _positionEventsModuleManager = null;
             _thisModuleManager = null;
