@@ -331,6 +331,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <None Include="README.md" />
     <None Include="ref\_instructions.txt" />
   </ItemGroup>
   <ItemGroup>
