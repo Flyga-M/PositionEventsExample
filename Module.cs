@@ -2,13 +2,14 @@
 using Blish_HUD.Modules;
 using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
+using Flyga.PositionEventsModule;
 using Microsoft.Xna.Framework;
-using System;
-using System.ComponentModel.Composition;
-using System.Threading.Tasks;
 using PositionEvents;
 using PositionEvents.Area;
-using Flyga.PositionEventsModule;
+using System;
+using System.ComponentModel.Composition;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace PositionEventsExample
 {
@@ -17,7 +18,8 @@ namespace PositionEventsExample
     {
         private static readonly Logger Logger = Logger.GetLogger<Module>();
 
-        private static PositionEventsModule _positionEventsModule;
+        private static ModuleManager _positionEventsModuleManager;
+        private static ModuleManager _thisModuleManager;
 
         #region Service Managers
         internal SettingsManager SettingsManager => this.ModuleParameters.SettingsManager;
@@ -36,7 +38,7 @@ namespace PositionEventsExample
 
         protected override void Initialize()
         {
-
+            
         }
 
         private void OnAreaJoinedOrLeft(PositionData positionData, bool isInside)
@@ -52,22 +54,90 @@ namespace PositionEventsExample
             Logger.Info("Area left.");
         }
 
+        private void OnPositionEventsEnabled(ModuleManager moduleManager)
+        {
+            if (!(moduleManager.ModuleInstance is PositionEventsModule positionEventsModule))
+            {
+                Logger.Error($"Unable to detect required Position Events Module: {moduleManager.ModuleInstance?.GetType()}");
+                // disable this module
+                _thisModuleManager?.Disable();
+                return;
+            }
+            _positionEventsModuleManager = moduleManager;
+
+            _positionEventsModuleManager.ModuleDisabled += OnOtherModuleDisabled;
+
+            // Add your areas, once you're sure the Position Events Module has been loaded
+            AddTestAreas(positionEventsModule);
+        }
+
+        private void OnPositionEventsDisabled(ModuleManager moduleManager)
+        {
+            // disable this module since it's dependent on the Position Events Module
+            _thisModuleManager?.Disable();
+
+            // no need to remove the areas from the Position Events Module, since it 
+            // takes care of that on it's own.
+        }
+
+        private void OnOtherModuleEnabled(object sender, EventArgs e)
+        {
+            if (!(sender is ModuleManager moduleManager))
+            {
+                return;
+            }
+
+            if (moduleManager.Manifest.Namespace != "Flyga.PositionEvents")
+            {
+                return;
+            }
+
+            if (!moduleManager.AssemblyLoaded)
+            {
+                Logger.Error("Unable to load module, because dependency Position Events Module " +
+                    "could not be loaded.");
+                _thisModuleManager?.Disable();
+                return;
+            }
+
+            OnPositionEventsEnabled(moduleManager);
+        }
+
+        private void OnOtherModuleDisabled(object sender, EventArgs e)
+        {
+            if (!(sender is ModuleManager moduleManager))
+            {
+                return;
+            }
+
+            if (moduleManager.Manifest.Namespace != "Flyga.PositionEvents")
+            {
+                return;
+            }
+
+            OnPositionEventsDisabled(moduleManager);
+        }
+
         protected override Task LoadAsync()
         {
+            // set reference for this modules manager
+            _thisModuleManager = GameService.Module.Modules
+                .Where(moduleManager => moduleManager.Manifest.Namespace == Namespace)
+                .FirstOrDefault();
+            
             // Retrieve a reference to the Position Events Module instance
             foreach (ModuleManager item in GameService.Module.Modules)
             {
                 if (item.Manifest.Namespace == "Flyga.PositionEvents")
                 {
-                    if (item.ModuleInstance is PositionEventsModule positionEventsModule)
+                    // if the assembly is already loaded, call OnPositionEventsEnabled manually
+                    if (item.AssemblyLoaded)
                     {
-                        _positionEventsModule = positionEventsModule;
+                        OnPositionEventsEnabled(item);
                     }
-                    else
-                    {
-                        Logger.Error("Unable to detect required Position Events Module.");
-                    }
-                    
+
+                    item.ModuleEnabled += OnOtherModuleEnabled;
+
                     break;
                 }
             }
@@ -75,7 +145,7 @@ namespace PositionEventsExample
             return Task.CompletedTask;
         }
 
-        private void AddTestAreas()
+        private void AddTestAreas(PositionEventsModule positionEventsModule)
         {
             // create the areas
             IBoundingObject area = new BoundingObjectBox(new Vector3(50, 50, 10), new Vector3(60, 70, 40));
@@ -84,10 +154,12 @@ namespace PositionEventsExample
             IBoundingObject testDifference = GetTestDifference();
 
             // register the areas with the Position Events Module
-            _positionEventsModule?.RegisterArea(this, 15, area, OnAreaJoinedOrLeft, true);
-            _positionEventsModule?.RegisterArea(this, 15, prism, OnAreaJoinedOrLeft, true);
-            _positionEventsModule?.RegisterArea(this, 15, testLake, OnAreaJoinedOrLeft, true);
-            _positionEventsModule?.RegisterArea(this, 15, testDifference, OnAreaJoinedOrLeft, true);
+            // debug flags are true for this example. Never ship your module with
+            // those set to true!
+            positionEventsModule.RegisterArea(this, 15, area, OnAreaJoinedOrLeft, debug: true);
+            positionEventsModule.RegisterArea(this, 15, prism, OnAreaJoinedOrLeft, debug: true);
+            positionEventsModule.RegisterArea(this, 15, testLake, OnAreaJoinedOrLeft, debug: true);
+            positionEventsModule.RegisterArea(this, 15, testDifference, OnAreaJoinedOrLeft, debug: true);
         }
 
         private IBoundingObject GetTestPrism()
@@ -139,9 +211,6 @@ namespace PositionEventsExample
 
         protected override void OnModuleLoaded(EventArgs e)
         {
-            // Add test areas, once the module is loaded.
-            AddTestAreas();
-
             // Base handler must be called
             base.OnModuleLoaded(e);
         }
@@ -158,7 +227,14 @@ namespace PositionEventsExample
 
             // All static members must be manually unset
 
-            _positionEventsModule = null;
+            if (_positionEventsModuleManager != null)
+            {
+                _positionEventsModuleManager.ModuleEnabled -= OnOtherModuleEnabled;
+                _positionEventsModuleManager.ModuleDisabled -= OnOtherModuleDisabled;
+            }
+
+            _positionEventsModuleManager = null;
+            _thisModuleManager = null;
         }
 
     }
