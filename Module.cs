@@ -3,6 +3,7 @@ using Blish_HUD.Modules;
 using Blish_HUD.Modules.Managers;
 using Blish_HUD.Settings;
 using Flyga.PositionEventsModule;
+using Flyga.PositionEventsModule.Contexts;
 using Microsoft.Xna.Framework;
 using PositionEvents;
 using PositionEvents.Area;
@@ -18,8 +19,32 @@ namespace PositionEventsExample
     {
         private static readonly Logger Logger = Logger.GetLogger<Module>();
 
-        private static ModuleManager _positionEventsModuleManager;
-        private static ModuleManager _thisModuleManager;
+        private ModuleManager _positionEventsModuleManager;
+        private ModuleManager _thisModuleManager;
+
+        private PositionEventsContext _positionEventsContext;
+
+        private object padlock = new object();
+
+        private bool _areasAdded = false;
+
+        private bool AreasAdded
+        {
+            get
+            {
+                lock(padlock)
+                {
+                    return _areasAdded;
+                }
+            }
+            set
+            {
+                lock(padlock)
+                {
+                    _areasAdded = value;
+                }
+            }
+        }
 
         #region Service Managers
         internal SettingsManager SettingsManager => this.ModuleParameters.SettingsManager;
@@ -54,21 +79,44 @@ namespace PositionEventsExample
             Logger.Info("Area left.");
         }
 
+        private async void OnPositionEventsLoaded(object _, EventArgs _1)
+        {
+            await Task.Delay(1000);
+            OnPositionEventsEnabled(_positionEventsModuleManager);
+        }
+
         private void OnPositionEventsEnabled(ModuleManager moduleManager)
         {
-            if (!(moduleManager.ModuleInstance is PositionEventsModule positionEventsModule))
-            {
-                Logger.Error($"Unable to detect required Position Events Module: {moduleManager.ModuleInstance?.GetType()}");
-                // disable this module
-                _thisModuleManager?.Disable();
-                return;
-            }
+            //if (!(moduleManager.ModuleInstance is PositionEventsModule positionEventsModule))
+            //{
+            //    Logger.Error($"Unable to detect required Position Events Module: {moduleManager.ModuleInstance?.GetType()}");
+            //    // disable this module
+            //    _thisModuleManager?.Disable();
+            //    return;
+            //}
+
             _positionEventsModuleManager = moduleManager;
+
+            //if (!positionEventsModule.Loaded)
+            //{
+            //    positionEventsModule.ModuleLoaded += OnPositionEventsLoaded;
+            //}
+            //else
+            //{
+            //    positionEventsModule.ModuleLoaded -= OnPositionEventsLoaded;
+            //}
 
             _positionEventsModuleManager.ModuleDisabled += OnOtherModuleDisabled;
 
+            // Retrieve the context, once you're sure the Position Events Module has been loaded
+            RetrieveContext();
             // Add your areas, once you're sure the Position Events Module has been loaded
-            AddTestAreas(positionEventsModule);
+            //if (!AreasAdded && Loaded)
+            //{
+            //    Logger.Info("Added areas via OnPositionEventsEnabled");
+            //    AreasAdded = true;
+            //    AddTestAreas();
+            //}
         }
 
         private void OnPositionEventsDisabled(ModuleManager moduleManager)
@@ -118,32 +166,38 @@ namespace PositionEventsExample
         protected override Task LoadAsync()
         {
             // set reference for this modules manager
-            _thisModuleManager = GameService.Module.Modules
-                .Where(moduleManager => moduleManager.Manifest.Namespace == Namespace)
-                .FirstOrDefault();
+            //_thisModuleManager = GameService.Module.Modules
+            //    .Where(moduleManager => moduleManager.Manifest.Namespace == Namespace)
+            //    .FirstOrDefault();
             
             // Retrieve a reference to the Position Events Module instance
-            foreach (ModuleManager item in GameService.Module.Modules)
-            {
-                if (item.Manifest.Namespace == "Flyga.PositionEvents")
-                {
-                    // if the assembly is already loaded, call OnPositionEventsEnabled manually
-                    if (item.AssemblyLoaded)
-                    {
-                        OnPositionEventsEnabled(item);
-                    }
+            //foreach (ModuleManager item in GameService.Module.Modules)
+            //{
+            //    if (item.Manifest.Namespace == "Flyga.PositionEvents")
+            //    {
+            //        // if the assembly is already loaded, call OnPositionEventsEnabled manually
+            //        if (item.AssemblyLoaded)
+            //        {
+            //            OnPositionEventsEnabled(item);
+            //        }
 
-                    item.ModuleEnabled += OnOtherModuleEnabled;
+            //        item.ModuleEnabled += OnOtherModuleEnabled;
 
-                    break;
-                }
-            }
+            //        break;
+            //    }
+            //}
 
             return Task.CompletedTask;
         }
 
-        private void AddTestAreas(PositionEventsModule positionEventsModule)
+        private void AddTestAreas()
         {
+            if (_positionEventsContext == null)
+            {
+                Logger.Error("Unable to add test areas, since the context was not retrieved.");
+                return;
+            }
+            
             // create the areas
             IBoundingObject area = new BoundingObjectBox(new Vector3(50, 50, 10), new Vector3(60, 70, 40));
             IBoundingObject prism = GetTestPrism();
@@ -153,10 +207,10 @@ namespace PositionEventsExample
             // register the areas with the Position Events Module
             // debug flags are true for this example. Never ship your module with
             // those set to true!
-            positionEventsModule.RegisterArea(this, 15, area, OnAreaJoinedOrLeft, debug: true);
-            positionEventsModule.RegisterArea(this, 15, prism, OnAreaJoinedOrLeft, debug: true);
-            positionEventsModule.RegisterArea(this, 15, testLake, OnAreaJoinedOrLeft, debug: true);
-            positionEventsModule.RegisterArea(this, 15, testDifference, OnAreaJoinedOrLeft, debug: true);
+            _positionEventsContext.RegisterArea(this, 15, area, OnAreaJoinedOrLeft, debug: true);
+            //_positionEventsContext.RegisterArea(this, 15, prism, OnAreaJoinedOrLeft, debug: true);
+            //_positionEventsContext.RegisterArea(this, 15, testLake, OnAreaJoinedOrLeft, debug: true);
+            //_positionEventsContext.RegisterArea(this, 15, testDifference, OnAreaJoinedOrLeft, debug: true);
         }
 
         private IBoundingObject GetTestPrism()
@@ -208,8 +262,32 @@ namespace PositionEventsExample
 
         protected override void OnModuleLoaded(EventArgs e)
         {
+            //_thisModuleManager = GameService.Module.Modules
+            //    .Where(moduleManager => moduleManager.Manifest.Namespace == Namespace)
+            //    .FirstOrDefault();
+
+            //if (!AreasAdded && _positionEventsContext != null)
+            //{
+            //    Logger.Info("Added areas via OnModuleLoaded");
+            //    AreasAdded = true;
+            //    AddTestAreas();
+            //}
             // Base handler must be called
+
+            RetrieveContext();
+
             base.OnModuleLoaded(e);
+        }
+
+        private async void RetrieveContext()
+        {
+            await Task.Delay(2000);
+            
+            Logger.Info("Retrieving context...");
+            _positionEventsContext = GameService.Contexts.GetContext<PositionEventsContext>();
+            Logger.Info("Context retrieved: " + _positionEventsContext);
+
+            AddTestAreas();
         }
 
         protected override void Update(GameTime gameTime)
@@ -235,6 +313,7 @@ namespace PositionEventsExample
 
             _positionEventsModuleManager = null;
             _thisModuleManager = null;
+            _positionEventsContext = null;
         }
 
     }

@@ -196,10 +196,10 @@
     </Reference>
     <Reference Include="PositionEvents, Version=1.1.0.0, Culture=neutral, processorArchitecture=AMD64">
       <HintPath>packages\PositionEvents.1.1.0\lib\net48\PositionEvents.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="PositionEventsModule">
       <HintPath>.\PositionEventsModule.dll</HintPath>
-      <Private>False</Private>
     </Reference>
     <Reference Include="SharpDX, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1, processorArchitecture=MSIL">
       <HintPath>packages\SharpDX.4.0.1\lib\net45\SharpDX.dll</HintPath>
