@@ -16,7 +16,17 @@ dependencies":{
 > Make sure that the references of the PositionEvents Package and the Position Events Module have **Copy Local** set
 > to **False** in the properties of the reference. You don't need to ship them with your module, since they will
 > already be present, because of your modules dependence on the Position Events Module.
-## Retrieving a reference to the Position Events Module instance
+## Retrieving a reference to the Position Events Context
+To be able to use the functionality of the Position Events Module, you need to retrieve
+ it's `Context`. With this `PositionEventsContext` you can call it's methods to
+  add and remove your areas.
+
+> [!IMPORTANT]
+> To make sure the context can be loaded, you have to wait for the Position Events
+> Module to fully load, before retrieving it's context.
+>
+> In this is example this is solved by listening to the `ModuleManager.ModuleEnabled`
+> and `Module.ModuleLoaded` events.
 ### LoadAsync
 If the Position Events Module was enabled before your module is loaded, you can directly
  assign and use the Position Events Context (via OnPositionEventsEnabled).
@@ -122,11 +132,7 @@ private void OnPositionEventsEnabled(ModuleManager moduleManager)
     RetrieveContext();
 
     // Add your areas, once you're sure the Position Events Module has been loaded
-    if (!AreasAdded && Loaded)
-    {
-        AreasAdded = true;
-        AddTestAreas();
-    }
+    AddTestAreas();
 }
 ```
 ### OnPositionEventsLoaded

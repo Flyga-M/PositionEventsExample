@@ -26,28 +26,6 @@ namespace PositionEventsExample
 
         private PositionEventsContext _positionEventsContext;
 
-        private object padlock = new object();
-
-        private bool _areasAdded = false;
-
-        private bool AreasAdded
-        {
-            get
-            {
-                lock(padlock)
-                {
-                    return _areasAdded;
-                }
-            }
-            set
-            {
-                lock(padlock)
-                {
-                    _areasAdded = value;
-                }
-            }
-        }
-
         #region Service Managers
         internal SettingsManager SettingsManager => this.ModuleParameters.SettingsManager;
         internal ContentsManager ContentsManager => this.ModuleParameters.ContentsManager;
@@ -116,11 +94,7 @@ namespace PositionEventsExample
             RetrieveContext();
 
             // Add your areas, once you're sure the Position Events Module has been loaded
-            if (!AreasAdded && Loaded)
-            {
-                AreasAdded = true;
-                AddTestAreas();
-            }
+            AddTestAreas();
         }
 
         private void OnPositionEventsDisabled(ModuleManager moduleManager)
@@ -276,11 +250,11 @@ namespace PositionEventsExample
 
         protected override void OnModuleLoaded(EventArgs e)
         {
-            if (!AreasAdded && _positionEventsContext != null)
-            {
-                AreasAdded = true;
-                AddTestAreas();
-            }
+            //if (!AreasAdded && _positionEventsContext != null)
+            //{
+            //    AreasAdded = true;
+            //    AddTestAreas();
+            //}
 
             // Base handler must be called
             base.OnModuleLoaded(e);
