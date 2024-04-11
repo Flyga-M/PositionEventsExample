@@ -9,7 +9,7 @@ Provides an example of how to make use of
 ```
 dependencies":{
     "bh.blishhud": "^1.0.0",
-    "Flyga.PositionEvents": "^0.2.0"
+    "Flyga.PositionEvents": "^0.3.0"
 }
 ```
 > [!TIP]
@@ -19,7 +19,7 @@ dependencies":{
 ## Retrieving a reference to the Position Events Module instance
 ### LoadAsync
 If the Position Events Module was enabled before your module is loaded, you can directly
- assign and use the Position Events Module instance (via OnPositionEventsEnabled).
+ assign and use the Position Events Context (via OnPositionEventsEnabled).
 
 If the Position Events Module loads after your module, you can't directly assign and use it,
  because it would throw an Exception, since the required assemblies are not loaded yet.
@@ -30,10 +30,10 @@ protected override Task LoadAsync()
 {
     // [...] irrelevant parts for this explanation. For combined source look at Module.cs
     
-    // Retrieve a reference to the Position Events Module instance
+    // Retrieve a reference to the Position Events Context
     foreach (ModuleManager item in GameService.Module.Modules)
     {
-        if (item.Manifest.Namespace == "Flyga.PositionEvents")
+        if (item.Manifest.Namespace == POSITION_EVENTS_MODULE_NAMESPACE)
         {
             // if the assembly is already loaded, call OnPositionEventsEnabled manually
             if (item.AssemblyLoaded)
@@ -41,6 +41,9 @@ protected override Task LoadAsync()
                 OnPositionEventsEnabled(item);
             }
 
+            // make sure to retrieve the context only after the
+            // Position Events Module was enabled (and therefor the
+            // assembly was loaded)
             item.ModuleEnabled += OnOtherModuleEnabled;
 
             break;
@@ -52,7 +55,7 @@ protected override Task LoadAsync()
 ```
 ### OnOtherModuleEnabled
 If the Position Events Module and it's assembly was loaded, you can assign and use the
- Position Events Module instance (via OnPositionEventsEnabled).
+ Position Events Context (via OnPositionEventsEnabled).
 
 Make sure to unbox the ModuleManager and check if it's the manager of the Position Events
  Module.
@@ -61,17 +64,21 @@ private void OnOtherModuleEnabled(object sender, EventArgs e)
 {
     if (!(sender is ModuleManager moduleManager))
     {
-        return;
+        throw new ArgumentException("OnOtherModuleEnabled must be called " +
+            "by a ModuleManager.", nameof(sender));
     }
 
-    if (moduleManager.Manifest.Namespace != "Flyga.PositionEvents")
+    if (moduleManager.Manifest.Namespace != POSITION_EVENTS_MODULE_NAMESPACE)
     {
-        return;
+        throw new ArgumentException("OnOtherModuleEnabled must be called " +
+            $"by the ModuleManager of the {POSITION_EVENTS_MODULE_NAMESPACE} " +
+            "module.", nameof(sender));
     }
 
     if (!moduleManager.AssemblyLoaded)
     {
-        Logger.Error("Unable to load module, because dependency Position Events Module " +
+        Logger.Error($"Unable to load module, because dependency " +
+            $"{POSITION_EVENTS_MODULE_NAMESPACE} module" +
             "could not be loaded.");
         // [...] irrelevant parts for this explanation. For combined source look at Module.cs
         return;
@@ -81,10 +88,10 @@ private void OnOtherModuleEnabled(object sender, EventArgs e)
 }
 ```
 ### OnPositionEventsEnabled
-After the Position Events Module has been enabled, you can finally use it's instance to
+After the Position Events Module has been enabled, you can finally use it's context to
  register your areas.
 
-Here you can also save a reference to the module or it's manager for later use.
+Here you can also save a reference to the module manager for later use.
 ```
 private void OnPositionEventsEnabled(ModuleManager moduleManager)
 {
@@ -94,28 +101,71 @@ private void OnPositionEventsEnabled(ModuleManager moduleManager)
         // [...] irrelevant parts for this explanation. For combined source look at Module.cs
         return;
     }
+
     // save a reference to the ModuleManager for later use
     _positionEventsModuleManager = moduleManager;
 
+    if (!positionEventsModule.Loaded)
+    {
+        // if the Position Events Module is not loaded yet, come back when it is
+        positionEventsModule.ModuleLoaded += OnPositionEventsLoaded;
+        return;
+    }
+    else
+    {
+        positionEventsModule.ModuleLoaded -= OnPositionEventsLoaded;
+    }
+
     // [...] irrelevant parts for this explanation. For combined source look at Module.cs
 
+     // Retrieve the context, once you're sure the Position Events Module has been loaded
+    RetrieveContext();
+
     // Add your areas, once you're sure the Position Events Module has been loaded
-    AddTestAreas(positionEventsModule);
+    if (!AreasAdded && Loaded)
+    {
+        AreasAdded = true;
+        AddTestAreas();
+    }
+}
+```
+### OnPositionEventsLoaded
+This just loops back to `OnPositionEventsEnabled`,
+ when the Position Events Module was loaded.
+```
+private void OnPositionEventsLoaded(object _, EventArgs _1)
+{
+    OnPositionEventsEnabled(_positionEventsModuleManager);
+}
+```
+### RetrieveContext
+Finally you can retrieve the Position Events Context to register your areas
+ afterwards.
+```
+private void RetrieveContext()
+{
+    _positionEventsContext = GameService.Contexts.GetContext<PositionEventsContext>();
 }
 ```
 ## Building and registering your areas
-Now that you have a reference to the Position Events Module instance and you made sure
- it's loaded, you can register your areas.
+Now that you have a reference to the Position Events Context and you made sure
+ the Position Events Module is loaded, you can register your areas.
 ```
 private void AddTestAreas(PositionEventsModule positionEventsModule)
 {
+    if (_positionEventsContext == null)
+    {
+        Logger.Error("Unable to add test areas, since the context was not retrieved.");
+        return;
+    }
+    
     // create the areas
     IBoundingObject area = new BoundingObjectBox(new Vector3(50, 50, 10), new Vector3(60, 70, 40));
     IBoundingObject prism = GetTestPrism();
     IBoundingObject testLake = GetTestLake();
     IBoundingObject testDifference = GetTestDifference();
 
-    // register the areas with the Position Events Module
+    // register the areas with the Position Events Context
     // debug flags are true for this example. Never ship your module with
     // those set to true!
     positionEventsModule.RegisterArea(this, 15, area, OnAreaJoinedOrLeft, debug: true);
@@ -171,6 +221,8 @@ private void OnPositionEventsEnabled(ModuleManager moduleManager)
     }
     _positionEventsModuleManager = moduleManager;
 
+    // [...] irrelevant parts for this explanation. For combined source look at Module.cs
+
     _positionEventsModuleManager.ModuleDisabled += OnOtherModuleDisabled;
 
     // [...] irrelevant parts for this explanation. For combined source look at Module.cs
@@ -184,12 +236,15 @@ private void OnOtherModuleDisabled(object sender, EventArgs e)
 {
     if (!(sender is ModuleManager moduleManager))
     {
-        return;
+        throw new ArgumentException("OnOtherModuleEnabled must be called " +
+            "by a ModuleManager.", nameof(sender));
     }
 
-    if (moduleManager.Manifest.Namespace != "Flyga.PositionEvents")
+    if (moduleManager.Manifest.Namespace != POSITION_EVENTS_MODULE_NAMESPACE)
     {
-        return;
+        throw new ArgumentException("OnOtherModuleEnabled must be called " +
+            $"by the ModuleManager of the {POSITION_EVENTS_MODULE_NAMESPACE} " +
+            "module.", nameof(sender));
     }
 
     OnPositionEventsDisabled(moduleManager);
@@ -229,5 +284,6 @@ You don't need to remove your registered areas, because the Position Events Modu
 
     _positionEventsModuleManager = null;
     _thisModuleManager = null;
+    _positionEventsContext = null;
 }
  ```
